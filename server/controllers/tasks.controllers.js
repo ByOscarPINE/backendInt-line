@@ -1,5 +1,5 @@
 import { pool } from "../db.js";
-import bcrypt from "bcrypt";
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 export const login = async (req, res) => {
@@ -14,7 +14,7 @@ export const login = async (req, res) => {
       return res.status(401).send("Email o contraseña incorrectos");
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password, function(err, result) {});
     if (isMatch) {
       // Generar un token JWT para el usuario
       const token = jwt.sign({ id: user.id,email: user.email}, 'tuSecreto', { expiresIn: '1h' });
@@ -115,7 +115,7 @@ export const register = async (req, res) => {
   try {
     const { email, password } = req.body;
     const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, saltRounds, function(err, hash) {});
 
     const [result] = await pool.query(
       "INSERT INTO usuarios(email, password) VALUES (?, ?)",
