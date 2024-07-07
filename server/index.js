@@ -8,7 +8,7 @@ import taskRoutes from './routes/tasks.routes.js';
 const app = express();
 
 app.use(cors({
-    origin: 'http://localhost:5173'
+    origin: ['http://localhost:5173', 'https://int-line-production.up.railway.app']
 }));
 
 app.use(express.json());
