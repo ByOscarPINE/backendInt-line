@@ -1,28 +1,53 @@
 import { Router } from "express";
 import {
-    getTasks,
+    login,
+    getPacientes,
+    registerPac,
     getTask,
     createTask,
     deleteTask,
     updateTask,
-    login,
     register,
-    registerPac,
     getDiagnosticos,
     insertDiag,
     Diagnostic,
-    getEnfermedades,
-    getPaciente
+    getEnfermedad,
+    getPaciente,
+    getLogDiag,
+    getSintomas
 } from "../controllers/tasks.controllers.js";
 
 const router = Router();
 
 
+router.put('/register', register);
+
 router.post('/login', login);
 
+router.get('/pacientes', getPacientes);
+
+router.put('/registerPac', registerPac);
+
+router.put('/insertDiagnostico/:id', insertDiag);
+
+router.get('/diagnosticos/:id', getDiagnosticos);
+
+router.post('/getUser/:id', getPaciente);
 
 
-router.get('/tasks', getTasks);
+
+
+router.get('/getInfoDg/:idpa/:iddi', getLogDiag);
+
+
+
+router.get('/getSintomas', getSintomas);
+
+
+
+router.post('/enfermedad', getEnfermedad);
+
+
 
 router.get('/tasks/:id', getTask);
 
@@ -33,20 +58,9 @@ router.delete('/tasks/:id', deleteTask);
 router.put('/tasks/:id', updateTask);
 
 
-
-router.get('/register', register);
-
-router.post('/registerPac', registerPac);
-
-router.get('/diagnosticos/:id', getDiagnosticos);
-
-router.put('/insertDiagnostico/:id', insertDiag);
-
 router.post('/diagEnf', Diagnostic);
 
-router.post('/enfermedades', getEnfermedades);
 
-router.post('/getUser/:id', getPaciente)
 
 
 export default router;
