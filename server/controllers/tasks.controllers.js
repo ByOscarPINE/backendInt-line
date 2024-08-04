@@ -30,7 +30,7 @@ export const login = async (req, res) => {
     
     const { email, password } = req.body;
     // Buscar el usuario por su email
-    const [results] = await pool.query("SELECT * FROM Usuario WHERE email = ?", [email]);
+    const [results] = await pool.query("SELECT * FROM Usuario WHERE Email = ?", [email]);
     const user = results[0];
     if (!user) {
       // Cambiar el mensaje para mejorar la seguridad
@@ -327,9 +327,9 @@ export const getEnfermedad = async (req, res) => {
     
     // const descripciones = req.body.descripciones;
 
-    const descripciones = req.body.map(obj => obj.descripciones);
+    // const descripciones = req.body.map(obj => obj.descripciones);
 
-    // const descripciones = req.body.descripciones;
+    const descripciones = req.body;
 
     // console.log(descripciones)
     const placeholders = descripciones.map(() => '?').join(', ');
@@ -341,10 +341,22 @@ export const getEnfermedad = async (req, res) => {
 
       console.log(result)
 
-      const [result2] = await pool.query ('SELECT Nombre FROM Enfermedad WHERE ID_Enfermedad = ?',
-        [result[0]]
+      const ids = result.map(obj => obj.ID_Enfermedad);
+
+      const suma = result.reduce((acc, obj) => acc + obj.repeticiones, 0);
+
+      const placeholders2 = result.map(() => '?').join(', ');
+
+      const [result2] = await pool.query (`SELECT Nombre, ID_Enfermedad FROM Enfermedad WHERE ID_Enfermedad IN (${placeholders2})`,
+        ids
       )
-    res.json(result);
+
+      const combinedObj = result2.map(obj => ({
+        ...obj,
+        porcentaje: result.find(o => o.ID_Enfermedad === obj.ID_Enfermedad).repeticiones / suma * 100 +'%',
+      }));
+    res.json(combinedObj);
+    console.log(combinedObj)
   } catch (error) {
     console.log(error);
     res.status(500).send('Error interno del servidor');
