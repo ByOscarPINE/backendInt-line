@@ -1,6 +1,5 @@
 import { pool } from "../db.js";
 import bcrypt from 'bcryptjs';
-import e from "cors";
 import jwt from 'jsonwebtoken';
 
 export const register = async (req, res) => {
@@ -102,9 +101,6 @@ export const insertDiag = async (req, res) => {
       id_d = id_p[0][0].ID_Diagnostico_Paciente + 1;
     }
 
-    console.log(id_d)
-
-
     const result = await pool.query(
       'INSERT INTO Diagnostico (ID_Diagnostico_Paciente, Fecha, Peso, Estatura, Temperatura, Presion_Arterial, Pulso, Alergias, Antecedentes, Sintoma_1, Sintoma_2, Sintoma_3, Sintoma_4, Sintoma_5, Diabetes, Obesidad, Neumonia, Asma, Artritis, Gota, Epilepsia, Hipertension, Nombre_Diagnostico) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [id_d, Fecha, peso, estatura, temperatura, presion, pulso, alergias, 
@@ -118,10 +114,43 @@ export const insertDiag = async (req, res) => {
       [req.params.id, result[0].insertId]
     )
 
-    // const resultid = await pool.query(
-    //   'SELECT ID_Diagnostico FROM Paciente_Diagnostico WHERE ID_Paciente = ? ORDER BY ID_Diagnostico DESC LIMIT 1',
-    //   [req.params.id]
-    // )
+    //////////////////////// Enfermedades ////////////////////////
+
+    const descripciones1 = req.body.descripciones;
+
+    const placeholders = descripciones.map(() => '?').join(', ');
+
+      const [result1] = await pool.query(
+        `SELECT ID_Enfermedad, count(*) as repeticiones FROM Enfermedad_Sintoma WHERE ID_Sintoma IN ( SELECT ID_Sintoma FROM Sintoma WHERE Nombre IN (${placeholders})) GROUP BY ID_Enfermedad ORDER BY repeticiones DESC LIMIT 1`,
+        descripciones1
+      );
+
+      const ids = result1.map(obj => obj.ID_Enfermedad);
+
+      const suma = result1.reduce((acc, obj) => acc + obj.repeticiones, 0);
+
+      const placeholders2 = result1.map(() => '?').join(', ');
+
+      const [result3] = await pool.query (`SELECT Nombre, ID_Enfermedad FROM Enfermedad WHERE ID_Enfermedad IN (${placeholders2})`,
+        ids
+      )
+
+      const combinedObj = result3.map(obj => ({
+        ...obj,
+        porcentaje: (result1.find(o => o.ID_Enfermedad === obj.ID_Enfermedad).repeticiones / suma * 100).toFixed(2),
+      }));
+
+    for (
+      let index = 0; index < combinedObj.length; index++) {
+      const result4 = await pool.query(
+        'INSERT INTO Diagnostico_Enfermedad (ID_Diagnostico, ID_Enfermedad, Porcentaje) VALUES (?, ?, ?)',
+        [
+          result[0].insertId,
+          combinedObj[index].ID_Enfermedad,
+          combinedObj[index].porcentaje
+        ]
+      )
+    }
 
     res.json(id_d);
   } catch (error) {
@@ -179,11 +208,6 @@ export const getPaciente = async (req, res) => {
 export const getLogDiag = async (req, res) => {
   try {
 
-    // const id_p = await pool.query(
-    //   'SELECT ID_Diagnostico_Paciente FROM Diagnostico WHERE ID_Diagnostico = (SELECT ID_Diagnostico FROM Paciente_Diagnostico WHERE ID_Paciente = ? ORDER BY ID_Diagnostico DESC LIMIT 1) LIMIT 1',
-    //   [req.params.idpa]
-    // );
-
     const [idfd] = await pool.query(
       'SELECT ID_Diagnostico FROM Paciente_Diagnostico WHERE ID_Paciente = ?',
       [req.params.idpa]
@@ -202,13 +226,45 @@ export const getLogDiag = async (req, res) => {
       [req.params.idpa]
     )
 
-    const combinedObj = {
+    const result3 = await pool.query(
+      'SELECT * FROM Diagnostico_Enfermedad WHERE ID_Diagnostico = ?',
+      result[0].ID_Diagnostico
+    )
+
+    const IDEnfermedades = result3[0].map(obj => obj.ID_Enfermedad)
+
+    const placeholders2 = IDEnfermedades.map(() => '?').join(', ');
+
+    const result4 = await pool.query(
+      `SELECT * FROM Enfermedad WHERE ID_Enfermedad IN (${placeholders2})`,
+      IDEnfermedades  
+    )
+
+    const result5 = await pool.query(
+      `SELECT * FROM Enfermedad_Tratamiento WHERE ID_Enfermedad IN (${placeholders2})`,
+      IDEnfermedades
+    )
+
+    const IDTratamientos = result5[0].map(obj => obj.ID_Tratamiento)
+
+    const placeholders3 = IDTratamientos.map(() => '?').join(', ');
+
+    const result6 = await pool.query(
+      `SELECT * FROM Tratamiento WHERE ID_Tratamiento IN (${placeholders3})`,
+      IDTratamientos
+    )
+
+        const combinedObj = {
       ...result[0],
       ...result2[0],
-      ID_Paciente: req.params.idpa
+      ID_Paciente: req.params.idpa,
+      Enfermedad: result4[0][0].Nombre,
+      Porcentaje: result3[0][0].Porcentaje,
+      Tratamiento: result6[0]
     };
 
     res.json(combinedObj);
+
   } catch (error) {
     console.log(error)
   }
@@ -331,15 +387,12 @@ export const getEnfermedad = async (req, res) => {
 
     const descripciones = req.body;
 
-    // console.log(descripciones)
     const placeholders = descripciones.map(() => '?').join(', ');
 
       const [result] = await pool.query(
         `SELECT ID_Enfermedad, count(*) as repeticiones FROM Enfermedad_Sintoma WHERE ID_Sintoma IN ( SELECT ID_Sintoma FROM Sintoma WHERE Nombre IN (${placeholders})) GROUP BY ID_Enfermedad ORDER BY repeticiones DESC LIMIT 3`,
         descripciones
       );
-
-      console.log(result)
 
       const ids = result.map(obj => obj.ID_Enfermedad);
 
@@ -353,10 +406,11 @@ export const getEnfermedad = async (req, res) => {
 
       const combinedObj = result2.map(obj => ({
         ...obj,
-        porcentaje: result.find(o => o.ID_Enfermedad === obj.ID_Enfermedad).repeticiones / suma * 100 +'%',
+        porcentaje: result.find(o => o.ID_Enfermedad === obj.ID_Enfermedad).repeticiones / suma * 100 + '%',
       }));
     res.json(combinedObj);
-    console.log(combinedObj)
+    
+    console.log(combinedObj);
   } catch (error) {
     console.log(error);
     res.status(500).send('Error interno del servidor');
