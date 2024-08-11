@@ -45,7 +45,7 @@ router.get('/getSintomas', getSintomas);
 
 
 
-router.post('/enfermedad', getEnfermedad);
+router.get('/enfermedad', getEnfermedad);
 
 
 
