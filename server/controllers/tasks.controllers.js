@@ -118,73 +118,111 @@ export const insertDiag = async (req, res) => {
 
     //////////////////////// Enfermedades ////////////////////////
 
+    // const descripciones1 = req.body.descripciones;
+
+    // const placeholders = descripciones.map(() => '?').join(', ');
+
+    //   const [result1] = await pool.query(
+    //     `SELECT ID_Enfermedad, count(*) as repeticiones FROM Enfermedad_Sintoma WHERE ID_Sintoma IN ( SELECT ID_Sintoma FROM Sintoma WHERE Nombre IN (${placeholders})) GROUP BY ID_Enfermedad ORDER BY repeticiones DESC`,
+    //     descripciones1
+    //   );
+
+    //   const totales = result1.map(obj => obj.ID_Enfermedad);
+
+    //   const placeholdersT = totales.map(() => '?').join(', ');
+
+    //   const [result3] = await pool.query(
+    //     `SELECT ID_Enfermedad, count(*) as total FROM Enfermedad_Sintoma WHERE ID_Enfermedad IN (${placeholdersT}) GROUP BY ID_Enfermedad`,
+    //     totales
+    //   )
+
+    //   var IdsEnfermedades = [];
+
+    //   for(let index = 0; index < 5; index++) {
+    //     var rest = result3[index].total - result1[index].repeticiones;
+    //     IdsEnfermedades.push({ID_Enfermedad:result3[index].ID_Enfermedad, Porcentaje: rest});
+    //   }
+    //   IdsEnfermedades.sort((a, b) => a.Porcentaje - b.Porcentaje);
+
+
+    //   const ids = IdsEnfermedades.map(obj => obj.ID_Enfermedad);
+    //   const placeholders2 = ids.map(() => '?').join(', ');
+
+
+    //   // const ids = result1.map(obj => obj.ID_Enfermedad);
+
+    //   // const suma = result1.reduce((acc, obj) => acc + obj.repeticiones, 0);
+
+    //   // const placeholders2 = result1.map(() => '?').join(', ');
+
+    //   const [result4] = await pool.query (`SELECT Nombre, ID_Enfermedad FROM Enfermedad WHERE ID_Enfermedad IN (${placeholders2})`,
+    //     ids
+    //   )
+
+    //   const result5 = await pool.query(
+    //     'INSERT INTO Diagnostico_Enfermedad (ID_Diagnostico, ID_Enfermedad) VALUES (?, ?)',
+    //     [
+    //       result[0].insertId,
+    //       result4[0].ID_Enfermedad,
+    //     ]
+    //   )
+
+    // //   const combinedObj = result3.map(obj => ({
+    // //     ...obj,
+    // //     porcentaje: (result1.find(o => o.ID_Enfermedad === obj.ID_Enfermedad).repeticiones / suma * 100).toFixed(2),
+    // //   }));
+
+    // // for (
+    // //   let index = 0; index < 1; index++) {
+    // //   const result4 = await pool.query(
+    // //     'INSERT INTO Diagnostico_Enfermedad (ID_Diagnostico, ID_Enfermedad, Porcentaje) VALUES (?, ?, ?)',
+    // //     [
+    // //       result[0].insertId,
+    // //       combinedObj[index].ID_Enfermedad,
+    // //       combinedObj[index].porcentaje
+    // //     ]
+    // //   )
+    // // }
+
+    // // res.json(result1)
+
+
+    
     const descripciones1 = req.body.descripciones;
 
     const placeholders = descripciones.map(() => '?').join(', ');
 
       const [result1] = await pool.query(
-        `SELECT ID_Enfermedad, count(*) as repeticiones FROM Enfermedad_Sintoma WHERE ID_Sintoma IN ( SELECT ID_Sintoma FROM Sintoma WHERE Nombre IN (${placeholders})) GROUP BY ID_Enfermedad ORDER BY repeticiones DESC`,
+        `SELECT ID_Enfermedad, count(*) as repeticiones FROM Enfermedad_Sintoma WHERE ID_Sintoma IN ( SELECT ID_Sintoma FROM Sintoma WHERE Nombre IN (${placeholders})) GROUP BY ID_Enfermedad ORDER BY repeticiones DESC LIMIT 1`,
         descripciones1
       );
 
-      const totales = result1.map(obj => obj.ID_Enfermedad);
+      const ids = result1.map(obj => obj.ID_Enfermedad);
 
-      const placeholdersT = totales.map(() => '?').join(', ');
+      const suma = result1.reduce((acc, obj) => acc + obj.repeticiones, 0);
 
-      const [result3] = await pool.query(
-        `SELECT ID_Enfermedad, count(*) as total FROM Enfermedad_Sintoma WHERE ID_Enfermedad IN (${placeholdersT}) GROUP BY ID_Enfermedad`,
-        totales
-      )
+      const placeholders2 = result1.map(() => '?').join(', ');
 
-      var IdsEnfermedades = [];
-
-      for(let index = 0; index < 5; index++) {
-        var rest = result3[index].total - result1[index].repeticiones;
-        IdsEnfermedades.push({ID_Enfermedad:result3[index].ID_Enfermedad, Porcentaje: rest});
-      }
-      IdsEnfermedades.sort((a, b) => a.Porcentaje - b.Porcentaje);
-
-
-      const ids = IdsEnfermedades.map(obj => obj.ID_Enfermedad);
-      const placeholders2 = ids.map(() => '?').join(', ');
-
-
-      // const ids = result1.map(obj => obj.ID_Enfermedad);
-
-      // const suma = result1.reduce((acc, obj) => acc + obj.repeticiones, 0);
-
-      // const placeholders2 = result1.map(() => '?').join(', ');
-
-      const [result4] = await pool.query (`SELECT Nombre, ID_Enfermedad FROM Enfermedad WHERE ID_Enfermedad IN (${placeholders2})`,
+      const [result3] = await pool.query (`SELECT Nombre, ID_Enfermedad FROM Enfermedad WHERE ID_Enfermedad IN (${placeholders2})`,
         ids
       )
 
-      const result5 = await pool.query(
-        'INSERT INTO Diagnostico_Enfermedad (ID_Diagnostico, ID_Enfermedad) VALUES (?, ?)',
+      const combinedObj = result3.map(obj => ({
+        ...obj,
+        porcentaje: (result1.find(o => o.ID_Enfermedad === obj.ID_Enfermedad).repeticiones / suma * 100).toFixed(2),
+      }));
+
+    for (
+      let index = 0; index < combinedObj.length; index++) {
+      const result4 = await pool.query(
+        'INSERT INTO Diagnostico_Enfermedad (ID_Diagnostico, ID_Enfermedad, Porcentaje) VALUES (?, ?, ?)',
         [
           result[0].insertId,
-          result4[0].ID_Enfermedad,
+          combinedObj[index].ID_Enfermedad,
+          combinedObj[index].porcentaje
         ]
       )
-
-    //   const combinedObj = result3.map(obj => ({
-    //     ...obj,
-    //     porcentaje: (result1.find(o => o.ID_Enfermedad === obj.ID_Enfermedad).repeticiones / suma * 100).toFixed(2),
-    //   }));
-
-    // for (
-    //   let index = 0; index < 1; index++) {
-    //   const result4 = await pool.query(
-    //     'INSERT INTO Diagnostico_Enfermedad (ID_Diagnostico, ID_Enfermedad, Porcentaje) VALUES (?, ?, ?)',
-    //     [
-    //       result[0].insertId,
-    //       combinedObj[index].ID_Enfermedad,
-    //       combinedObj[index].porcentaje
-    //     ]
-    //   )
-    // }
-
-    // res.json(result1)
+    }
     res.json(id_d);
   } catch (error) {
     console.log(error)
@@ -423,7 +461,7 @@ export const getEnfermedad = async (req, res) => {
     const placeholders = descripciones1.map(() => '?').join(', ');
 
       const [result1] = await pool.query(
-        `SELECT ID_Enfermedad, count(*) as repeticiones FROM Enfermedad_Sintoma WHERE ID_Sintoma IN ( SELECT ID_Sintoma FROM Sintoma WHERE Nombre IN (${placeholders})) GROUP BY ID_Enfermedad`,
+        `SELECT ID_Enfermedad, count(*) as repeticiones FROM Enfermedad_Sintoma WHERE ID_Sintoma IN ( SELECT ID_Sintoma FROM Sintoma WHERE Nombre IN (${placeholders})) GROUP BY ID_Enfermedad ORDER BY repeticiones DESC`,
         descripciones1
       );
 
@@ -431,7 +469,7 @@ export const getEnfermedad = async (req, res) => {
 
       const placeholdersT = totales.map(() => '?').join(', ');
 
-      const [result2] = await pool.query(
+      const [result3] = await pool.query(
         `SELECT ID_Enfermedad, count(*) as total FROM Enfermedad_Sintoma WHERE ID_Enfermedad IN (${placeholdersT}) GROUP BY ID_Enfermedad`,
         totales
       )
@@ -439,13 +477,32 @@ export const getEnfermedad = async (req, res) => {
       var IdsEnfermedades = [];
 
       for(let index = 0; index < 5; index++) {
-        var rest = result2[index].total - result1[index].repeticiones;
-        IdsEnfermedades.push({ID_Enfermedad:result2[index].ID_Enfermedad, Porcentaje: rest});
+        var rest = result3[index].total - result1[index].repeticiones;
+        IdsEnfermedades.push({ID_Enfermedad:result3[index].ID_Enfermedad, Porcentaje: rest});
       }
       IdsEnfermedades.sort((a, b) => a.Porcentaje - b.Porcentaje);
 
 
-      res.json(IdsEnfermedades);
+      const ids = IdsEnfermedades.map(obj => obj.ID_Enfermedad);
+      const placeholders2 = ids.map(() => '?').join(', ');
+
+
+      // const ids = result1.map(obj => obj.ID_Enfermedad);
+
+      // const suma = result1.reduce((acc, obj) => acc + obj.repeticiones, 0);
+
+      // const placeholders2 = result1.map(() => '?').join(', ');
+
+      const [result4] = await pool.query (`SELECT Nombre, ID_Enfermedad FROM Enfermedad WHERE ID_Enfermedad IN (${placeholders2})`,
+        ids
+      )
+
+      const combinedObj = result4.map(obj => ({
+        ...obj,
+        porcentaje: IdsEnfermedades.find(o => o.ID_Enfermedad === obj.ID_Enfermedad).Porcentaje
+      }));
+
+      res.json(combinedObj)
 
     //   const ids = result1.map(obj => obj.ID_Enfermedad);
 
