@@ -293,7 +293,7 @@ export const getLogDiag = async (req, res) => {
     )
 
     const [result2] = await pool.query(
-      'SELECT nombres, fecha_nacimiento, apellido_paterno, apellido_materno FROM paciente WHERE id_paciente = ?',
+      'SELECT * FROM paciente WHERE id_paciente = ?',
       [req.params.idpa]
     )
 
